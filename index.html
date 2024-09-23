@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Predicción Real Estate EEUU</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            font-size: 1em;
+            margin-bottom: 10px;
+            display: block;
+            color: #333;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 20px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            width: 100%;
+            background-color: #007BFF;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .range-slider {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .range-slider input[type="range"] {
+            width: 80%;
+        }
+        .range-slider output {
+            font-size: 1em;
+            margin-left: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const stateSelect = document.getElementById("state");
+            const citySelect = document.getElementById("city");
+
+            stateSelect.addEventListener("change", function() {
+                const selectedState = stateSelect.value;
+                fetch('/get_cities', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ state: selectedState }),
+                })
+                .then(response => response.json())
+                .then(cities => {
+                    // Limpiar el select de ciudades
+                    citySelect.innerHTML = '<option value="" disabled selected>Seleccione una ciudad</option>';
+                    // Agregar las nuevas opciones de ciudades
+                    cities.forEach(city => {
+                        const option = document.createElement("option");
+                        option.value = city;
+                        option.textContent = city;
+                        citySelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error al obtener ciudades:', error));
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>Ingrese los datos para predecir</h2>
+        <form action="/predict" method="post">
+            <!-- Estado y Ciudad -->
+            <div class="form-group">
+                <label for="state">Estado:</label>
+                <select id="state" name="state" required>
+                    <option value="" disabled selected>Seleccione un estado</option>
+                    {% for estado in estados %}
+                        <option value="{{ estado }}">{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="city">Ciudad:</label>
+                <select id="city" name="city" required>
+                    <option value="" disabled selected>Seleccione una ciudad</option>
+                </select>
+            </div>
+
+            <!-- Tamaño de la casa -->
+            <div class="form-group">
+                <label for="house_size">Tamaño deseado del inmueble en pies cuadrados:</label>
+                <input type="number" id="house_size" name="house_size" step="0.01" min="0" required>
+            </div>
+
+            <!-- Habitaciones y Baños -->
+            <div class="form-group">
+                <label for="bed">Habitaciones:</label>
+                <input type="number" id="bed" name="bed" step="1" min="0" required>
+            </div>
+
+            <div class="form-group">
+                <label for="bath">Baños:</label>
+                <input type="number" id="bath" name="bath" step="1" min="0" required>
+            </div>
+
+            <!-- Jardín -->
+            <div class="checkbox-container">
+                <input type="checkbox" id="incluir_jardin" name="incluir_jardin">
+                <label for="incluir_jardin">¿Incluir jardín?</label>
+            </div>
+
+            <div id="garden-options" class="hidden form-group">
+                <label for="garden_percentage">Porcentaje del tamaño de la casa para el jardín (%):</label>
+                <div class="range-slider">
+                    <input type="range" id="garden_percentage" name="garden_percentage" min="0" max="100" step="1" value="0" oninput="updatePercentage(this.value)">
+                    <output id="percentageOutput">0</output>%
+                </div>
+            </div>
+
+            <!-- Estado Civil y Salario -->
+            <div class="form-group">
+                <label for="tiene_hijos">¿Tiene hijos?</label>
+                <select id="tiene_hijos" name="tiene_hijos" required>
+                    <option value="" disabled selected>Seleccione</option>
+                    <option value="no">No</option>
+                    <option value="si">Sí</option>
+                </select>
+            </div>
+
+            <div id="cantidad_hijos" class="hidden form-group">
+                <label for="num_hijos">Número de hijos:</label>
+                <select id="num_hijos" name="num_hijos">
+                    <option value="" disabled selected>Seleccione un número</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="estado_civil">Estado Civil:</label>
+                <select id="estado_civil" name="estado_civil" required>
+                    <option value="" disabled selected>Seleccione</option>
+                    <option value="soltero">Soltero</option>
+                    <option value="pareja">En Pareja</option>
+                </select>
+            </div>
+
+            <div id="salario_soltero" class="hidden form-group">
+                <label for="salario_soltero_input">Salario por hora:</label>
+                <input type="number" id="salario_soltero_input" name="salario_soltero" step="0.01" min="0">
+            </div>
+
+            <div id="salario_pareja" class="hidden form-group">
+                <label>¿Trabaja solo una persona?</label><br>
+                <input type="radio" id="un_trabajador" name="trabajadores" value="uno" checked>
+                <label for="un_trabajador">Sí</label>
+                <input type="radio" id="dos_trabajadores" name="trabajadores" value="dos">
+                <label for="dos_trabajadores">No, ambos trabajan</label>
+            </div>
+
+            <div id="salario_pareja_input1" class="hidden form-group">
+                <label for="salario_pareja_input1">Salario por hora (persona 1):</label>
+                <input type="number" id="salario_pareja_input1" name="salario_pareja1" step="0.01" min="0">
+            </div>
+
+            <div id="salario_pareja_input2_div" class="hidden form-group">
+                <label for="salario_pareja_input2">Salario por hora (persona 2):</label>
+                <input type="number" id="salario_pareja_input2" name="salario_pareja2" step="0.01" min="0">
+            </div>
+
+            <input type="submit" value="Calcular">
+        </form>
+    </div>
+
+    <script>
+        const incluirJardinCheckbox = document.getElementById('incluir_jardin');
+        const gardenOptionsDiv = document.getElementById('garden-options');
+        const percentageOutput = document.getElementById('percentageOutput');
+
+        incluirJardinCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                gardenOptionsDiv.classList.remove('hidden');
+            } else {
+                gardenOptionsDiv.classList.add('hidden');
+                percentageOutput.textContent = '0';
+            }
+        });
+
+        function updatePercentage(value) {
+            percentageOutput.textContent = value;
+        }
+
+        const tieneHijosSelect = document.getElementById('tiene_hijos');
+        const cantidadHijosDiv = document.getElementById('cantidad_hijos');
+        const estadoCivilSelect = document.getElementById('estado_civil');
+        const salarioSolteroDiv = document.getElementById('salario_soltero');
+        const salarioParejaDiv = document.getElementById('salario_pareja');
+        const salarioParejaInput1 = document.getElementById('salario_pareja_input1');
+        const salarioParejaInput2Div = document.getElementById('salario_pareja_input2_div');
+
+        tieneHijosSelect.addEventListener('change', function() {
+            if (this.value === 'si') {
+                cantidadHijosDiv.classList.remove('hidden');
+            } else {
+                cantidadHijosDiv.classList.add('hidden');
+                document.getElementById('num_hijos').value = '';
+            }
+        });
+
+        estadoCivilSelect.addEventListener('change', function() {
+            if (this.value === 'soltero') {
+                salarioSolteroDiv.classList.remove('hidden');
+                salarioParejaDiv.classList.add('hidden');
+                salarioParejaInput1.classList.add('hidden');
+                salarioParejaInput2Div.classList.add('hidden');
+            } else {
+                salarioSolteroDiv.classList.add('hidden');
+                salarioParejaDiv.classList.remove('hidden');
+                salarioParejaInput1.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('un_trabajador').addEventListener('change', function() {
+            salarioParejaInput2Div.classList.add('hidden');
+            document.getElementById('salario_pareja_input2').value = '0';
+        });
+
+        document.getElementById('dos_trabajadores').addEventListener('change', function() {
+            salarioParejaInput2Div.classList.remove('hidden');
+            document.getElementById('salario_pareja_input2').value = '';
+        });
+    </script>
+</body>
+</html>
